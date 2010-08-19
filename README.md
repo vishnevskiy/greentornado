@@ -30,17 +30,17 @@ Web Crawler
 RSS Proxy
 ==========
 
-from eventlet.green import urllib2
-from tornado import httpserver, ioloop, hub
+    from eventlet.green import urllib2
+    from tornado import httpserver, ioloop, hub
 
-def handle_request(request):
-    body = urllib2.urlopen('http://blog.eventlet.net/feed/').read()
-    request.write('HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s' % (len(body), body))
-    request.finish()
+    def handle_request(request):
+        body = urllib2.urlopen('http://blog.eventlet.net/feed/').read()
+        request.write('HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s' % (len(body), body))
+        request.finish()
 
-if __name__ == '__main__':
-    hub.join_ioloop()
-    http_server = httpserver.HTTPServer(hub.SpawnFactory(handle_request))
-    http_server.listen(8888)
-    ioloop.IOLoop.instance().start()
+    if __name__ == '__main__':
+        hub.join_ioloop()
+        http_server = httpserver.HTTPServer(hub.SpawnFactory(handle_request))
+        http_server.listen(8888)
+        ioloop.IOLoop.instance().start()
 
