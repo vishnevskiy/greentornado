@@ -6,7 +6,7 @@ import eventlet
 import functools
 import time
 
-class BaseTornadoHub(object):
+class TornadoHub(object):
     WRITE = WRITE
     READ = READ
 
@@ -63,37 +63,12 @@ class BaseTornadoHub(object):
     def running(self):
         return self.ioloop.running
 
-class TornadoHub(BaseTornadoHub):
-    state = 0
-
-    def __init__(self):
-        assert Hub.state == 0, ('%s hub can only be instantiated once' % type(self).__name__, Hub.state)
-        Hub.state = 1
-        g = greenlet.greenlet(self.run)
-        BaseTornadoHub.__init__(self, g)
-
-    def switch(self):
-        assert getcurrent() is not self.greenlet, 'Cannot switch to MAINLOOP from MAINLOOP'
-
-        if self.greenlet.dead:
-            self.greenlet = greenlet.greenlet(self.run)
-        try:
-            getcurrent().parent = self.greenlet
-        except ValueError:
-            pass
-
-        return self.greenlet.switch()
-
-    def run(self, *args, **kwargs):
-        assert Hub.state == 1, ('run function is not reentrant', Hub.state)
-        self.io_loop.start()
-
 Hub = TornadoHub
 
 def join_ioloop():
     """Integrate eventlet with Tornado's IOLoop."""
 
-    use_hub(BaseTornadoHub)
+    use_hub(TornadoHub)
     assert not hasattr(_threadlocal, 'hub')
     global hub
     hub = _threadlocal.hub = _threadlocal.Hub(greenlet.getcurrent())
@@ -109,5 +84,5 @@ class SpawnFactory(object):
         self.handler = handler
 
     def __call__(self, *args, **kwargs):
-        eventlet.spawn(self.handler, *args, **kwargs)
+        eventlet.spawn_n(self.handler, *args, **kwargs)
 
