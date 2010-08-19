@@ -1,29 +1,31 @@
 Allows Eventlet to run on top of Tornado's IOLoop.
 
-        import eventlet
-        from eventlet.green import urllib2
-        from tornado import ioloop, hub
-        import functools
+    import eventlet
+    from eventlet.green import urllib2
+    from tornado import ioloop, hub
+    import functools
 
-        def scrape(io_loop):
-            urls = ["http://www.google.com/intl/en_ALL/images/logo.gif",
-                 "https://wiki.secondlife.com/w/images/secondlife.jpg",
-                 "http://us.i1.yimg.com/us.yimg.com/i/ww/beta/y3.gif"]
+    def scrape(io_loop):
+        urls = ["http://www.google.com/intl/en_ALL/images/logo.gif",
+             "https://wiki.secondlife.com/w/images/secondlife.jpg",
+             "http://us.i1.yimg.com/us.yimg.com/i/ww/beta/y3.gif"]
 
-            def fetch(url):
-                print 'Fetching'
-                return urllib2.urlopen(url).read()
+        def fetch(url):
+            print 'Fetching'
+            return urllib2.urlopen(url).read()
 
-            pool = eventlet.GreenPool()
+        pool = eventlet.GreenPool()
 
-            for body in pool.imap(fetch, urls):
-                print 'Got Body', len(body)
+        for body in pool.imap(fetch, urls):
+            print 'Got Body', len(body)
 
-            io_loop.stop()
+        io_loop.stop()
 
-        if __name__ == '__main__':
-            io_loop = ioloop.IOLoop().instance()
-            hub.join_ioloop()
-            io_loop.add_callback(functools.partial(eventlet.spawn, scrape, io_loop))
-            io_loop.start()
+    if __name__ == '__main__':
+        io_loop = ioloop.IOLoop().instance()
+        hub.join_ioloop()
+        io_loop.add_callback(functools.partial(eventlet.spawn, scrape, io_loop))
+        io_loop.start()
+
+That's about it!
 
