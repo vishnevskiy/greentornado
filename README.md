@@ -26,6 +26,3 @@ Allows Eventlet to run on top of Tornado's IOLoop.
         hub.join_ioloop()
         io_loop.add_callback(functools.partial(eventlet.spawn, scrape, io_loop))
         io_loop.start()
-
-That's about it!
-
