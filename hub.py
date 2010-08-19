@@ -10,7 +10,7 @@ class TornadoHub(object):
     WRITE = WRITE
     READ = READ
 
-    def __init__(self, mainloop_greenlet, callback):
+    def __init__(self, mainloop_greenlet, callback=None):
         self.greenlet = mainloop_greenlet
         self.io_loop = ioloop.IOLoop.instance()
 
