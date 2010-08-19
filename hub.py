@@ -10,9 +10,13 @@ class TornadoHub(object):
     WRITE = WRITE
     READ = READ
 
-    def __init__(self, mainloop_greenlet):
-        self.io_loop = ioloop.IOLoop.instance()
+    def __init__(self, mainloop_greenlet, callback):
         self.greenlet = mainloop_greenlet
+        self.io_loop = ioloop.IOLoop.instance()
+
+        if callback:
+            # Spawn the callback after the IOLoop starts.
+            self.io_loop.add_callback(functools.partial(eventlet.spawn_n, callback))
 
     def switch(self):
         assert getcurrent() is not self.greenlet, 'Cannot switch to MAINLOOP from MAINLOOP'
@@ -26,6 +30,8 @@ class TornadoHub(object):
 
     def stop(self):
         self.io_loop.stop()
+
+    abort = stop
 
     def add(self, event, fd, callback):
         if event is READ:
@@ -56,22 +62,19 @@ class TornadoHub(object):
 
         return self.io_loop.add_callback(functools.partial(func, *args, **kwargs))
 
-    def abort(self):
-        self.ioloop.stop()
-
     @property
     def running(self):
         return self.ioloop.running
 
 Hub = TornadoHub
 
-def join_ioloop():
+def join_ioloop(callback=None):
     """Integrate eventlet with Tornado's IOLoop."""
 
     use_hub(TornadoHub)
     assert not hasattr(_threadlocal, 'hub')
     global hub
-    hub = _threadlocal.hub = _threadlocal.Hub(greenlet.getcurrent())
+    hub = _threadlocal.hub = _threadlocal.Hub(greenlet.getcurrent(), callback)
 
 class SpawnFactory(object):
     """Factory that spawns a new greenlet for each incoming connection.

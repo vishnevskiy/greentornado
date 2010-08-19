@@ -1,11 +1,13 @@
 Allows Eventlet to run on top of Tornado's IOLoop.
 
-    import eventlet
+Web Crawler
+===========
+
     from eventlet.green import urllib2
     from tornado import ioloop, hub
-    import functools
+    import eventlet
 
-    def scrape(io_loop):
+    def scrape():
         urls = ["http://www.google.com/intl/en_ALL/images/logo.gif",
              "https://wiki.secondlife.com/w/images/secondlife.jpg",
              "http://us.i1.yimg.com/us.yimg.com/i/ww/beta/y3.gif"]
@@ -19,10 +21,26 @@ Allows Eventlet to run on top of Tornado's IOLoop.
         for body in pool.imap(fetch, urls):
             print 'Got Body', len(body)
 
-        io_loop.stop()
+        ioloop.IOLoop().instance().stop()
 
     if __name__ == '__main__':
-        io_loop = ioloop.IOLoop().instance()
-        hub.join_ioloop()
-        io_loop.add_callback(functools.partial(eventlet.spawn, scrape, io_loop))
-        io_loop.start()
+        hub.join_ioloop(scrape)
+        ioloop.IOLoop().instance().start()
+
+RSS Proxy
+==========
+
+from eventlet.green import urllib2
+from tornado import httpserver, ioloop, hub
+
+def handle_request(request):
+    body = urllib2.urlopen('http://blog.eventlet.net/feed/').read()
+    request.write('HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s' % (len(body), body))
+    request.finish()
+
+if __name__ == '__main__':
+    hub.join_ioloop()
+    http_server = httpserver.HTTPServer(hub.SpawnFactory(handle_request))
+    http_server.listen(8888)
+    ioloop.IOLoop.instance().start()
+
