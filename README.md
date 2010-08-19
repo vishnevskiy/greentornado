@@ -40,7 +40,6 @@ RSS Proxy
 
     if __name__ == '__main__':
         hub.join_ioloop()
-        http_server = httpserver.HTTPServer(hub.SpawnFactory(handle_request))
-        http_server.listen(8888)
+        httpserver.HTTPServer(hub.SpawnFactory(handle_request)).listen(8888)
         ioloop.IOLoop.instance().start()
 
