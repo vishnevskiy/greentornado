@@ -1,10 +1,67 @@
 from eventlet import getcurrent, greenlet
-from eventlet.hubs import _threadlocal, use_hub
+from eventlet.hubs import _threadlocal, use_hub, timer, get_hub
 from eventlet.hubs.hub import READ, WRITE
 from tornado import ioloop
 import eventlet
 import functools
 import time
+import sys
+
+class Timer(timer.Timer):
+    """Fix Eventlet's Timer to work with Tornado's IOLoop."""
+
+    def __init__(self, *args, **kwargs):
+        timer.Timer.__init__(self, *args, **kwargs)
+        self.schedule()
+
+    def schedule(self):
+        """Schedule this timer to run in the IOLoop."""
+
+        self.called = False
+        self.scheduled_time = get_hub().io_loop.add_timeout(time.time() + self.seconds, self)
+        return self
+
+    def cancel(self):
+        """Prevent this timer from being called. If the timer has already
+        been called or canceled, has no effect."""
+
+        if not self.called:
+            self.called = True
+            get_hub().io_loop.remove_timeout(self.scheduled_time)
+            try:
+                del self.tpl
+            except AttributeError:
+                pass
+
+class LocalTimer(Timer):
+    def __init__(self, *args, **kwargs):
+        self.greenlet = greenlet.getcurrent()
+        Timer.__init__(self, *args, **kwargs)
+
+    @property
+    def pending(self):
+        if self.greenlet is None or self.greenlet.dead:
+            return False
+        return not self.called
+
+    def __call__(self, *args):
+        if not self.called:
+            self.called = True
+            if self.greenlet is not None and self.greenlet.dead:
+                return
+            cb, args, kw = self.tpl
+            cb(*args, **kw)
+
+    def cancel(self):
+        self.greenlet = None
+        Timer.cancel(self)
+
+def call_later(cls, seconds, func, *args, **kwargs):
+    assert callable(func), '%s is not callable' % func
+    if not isinstance(seconds, (int, long, float)):
+        raise TypeError('Seconds must be int, long, or float, was ' + type(seconds))
+    assert sys.maxint >= seconds >= 0, '%s is not greater than or equal to 0 seconds' % seconds
+    return cls(seconds, func, *args, **kwargs)
 
 class TornadoHub(object):
     WRITE = WRITE
@@ -45,22 +102,17 @@ class TornadoHub(object):
         self.io_loop.remove_handler(fd)
 
     def schedule_call_local(self, seconds, func, *args, **kwargs):
-        g = greenlet.getcurrent()
-
         def call_if_greenlet_alive(*args1, **kwargs1):
-            if g.dead:
+            if t.greenlet.dead:
                 return
             return func(*args1, **kwargs1)
-
-        return self.io_loop.add_timeout(time.time() + seconds, functools.partial(func, *args, **kwargs))
+        t = call_later(LocalTimer, seconds, call_if_greenlet_alive, *args, **kwargs)
+        return t
 
     schedule_call = schedule_call_local
 
     def schedule_call_global(self, seconds, func, *args, **kwargs):
-        if seconds:
-            return self.io_loop.add_timeout(time.time() + seconds, functools.partial(func, *args, **kwargs))
-
-        return self.io_loop.add_callback(functools.partial(func, *args, **kwargs))
+        return call_later(Timer, seconds, func, *args, **kwargs)
 
     @property
     def running(self):
@@ -69,7 +121,7 @@ class TornadoHub(object):
 Hub = TornadoHub
 
 def join_ioloop(callback=None):
-    """Integrate eventlet with Tornado's IOLoop."""
+    """Integrate Eventlet with Tornado's IOLoop."""
 
     use_hub(TornadoHub)
     assert not hasattr(_threadlocal, 'hub')
