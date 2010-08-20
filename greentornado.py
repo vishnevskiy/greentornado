@@ -1,5 +1,5 @@
 from eventlet import getcurrent, greenlet
-from eventlet.hubs import _threadlocal, use_hub, timer, get_hub
+from eventlet.hubs import timer, get_hub
 from eventlet.hubs.hub import READ, WRITE
 import tornado.ioloop
 import tornado.web
@@ -8,6 +8,18 @@ import functools
 import time
 import sys
 import inspect
+
+def greenify(cls_or_func):
+    """Decorate classes or functions with this to make them spawn as greenlets when initialized or called."""
+
+    if inspect.isclass(cls_or_func) and tornado.web.RequestHandler in inspect.getmro(cls_or_func):
+        execute = cls_or_func._execute
+        cls_or_func._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
+        return cls_or_func
+    else:
+        def wrapper(*args, **kwargs):
+            eventlet.spawn_n(cls_or_func, *args, **kwargs)
+        return wrapper
 
 class Timer(timer.Timer):
     """Fix Eventlet's Timer to work with Tornado's IOLoop."""
@@ -69,8 +81,8 @@ class TornadoHub(object):
     WRITE = WRITE
     READ = READ
 
-    def __init__(self, mainloop_greenlet, callback=None):
-        self.greenlet = mainloop_greenlet
+    def __init__(self, callback=None):
+        self.greenlet = greenlet.getcurrent()
         self.io_loop = tornado.ioloop.IOLoop.instance()
 
         if callback:
@@ -121,24 +133,4 @@ class TornadoHub(object):
         return self.ioloop.running
 
 Hub = TornadoHub
-
-def join_ioloop(callback=None):
-    """Integrate Eventlet with Tornado's IOLoop."""
-
-    use_hub(TornadoHub)
-    assert not hasattr(_threadlocal, 'hub')
-    global hub
-    hub = _threadlocal.hub = _threadlocal.Hub(greenlet.getcurrent(), callback)
-
-def greenify(cls_or_func):
-    """Decorate classes or functions with this to make them spawn as greenlets when initialized or called."""
-
-    if inspect.isclass(cls_or_func) and tornado.web.RequestHandler in inspect.getmro(cls_or_func):
-        execute = cls_or_func._execute
-        cls_or_func._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
-        return cls_or_func
-    else:
-        def wrapper(*args, **kwargs):
-            eventlet.spawn_n(cls_or_func, *args, **kwargs)
-        return wrapper
 

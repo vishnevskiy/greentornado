@@ -1,16 +1,16 @@
 from eventlet.green import urllib2
 from tornado import ioloop
+from eventlet.hubs import use_hub
 from tornado.httpclient import AsyncHTTPClient
 import eventlet
 import time
 import greentornado
 
-# HTTP Client
-
 urls = ["http://www.google.com/intl/en_ALL/images/logo.gif",
          "https://wiki.secondlife.com/w/images/secondlife.jpg",
          "http://us.i1.yimg.com/us.yimg.com/i/ww/beta/y3.gif"]
 
+@greentornado.greenify
 def eventlet_scrape():
     def fetch(url):
         print '(Tornado /w Eventlet) Fetch ', url
@@ -46,7 +46,8 @@ def normal_scrape():
 if __name__ == '__main__':
     # (Tornado w/ Eventlet) HTTP Client
     st = time.time()
-    greentornado.join_ioloop(eventlet_scrape)
+    use_hub(greentornado.Hub)
+    eventlet_scrape()
     ioloop.IOLoop().instance().start()
     print time.time() - st
 
