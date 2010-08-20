@@ -1,5 +1,7 @@
 Allows Eventlet to run on top of Tornado's IOLoop.
 
+If you want to use eventlet without using `greenify` you have to call `eventlet.hubs.use_hub(greentornado.Hub)` manually. 
+
 Web Crawler
 ===========
 
@@ -67,5 +69,3 @@ web.py
         http_server = tornado.httpserver.HTTPServer(application)
         http_server.listen(8888)
         tornado.ioloop.IOLoop.instance().start()
-
-If you want to use eventlet without using `greenify` you have to call `eventlet.hubs.use_hub(greentornado.Hub)` manually. 
