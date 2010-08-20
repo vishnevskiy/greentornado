@@ -31,20 +31,20 @@ Web Crawler
 HTTP Proxy
 ==========
 
-from eventlet.green import urllib2
-from tornado import httpserver, ioloop
-import greentornado
+    from eventlet.green import urllib2
+    from tornado import httpserver, ioloop
+    import greentornado
 
-@greentornado.greenify
-def handle_request(request):
-    body = urllib2.urlopen('http://blog.eventlet.net/feed/').read()
-    request.write('HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s' % (len(body), body))
-    request.finish()
+    @greentornado.greenify
+    def handle_request(request):
+        body = urllib2.urlopen('http://blog.eventlet.net/feed/').read()
+        request.write('HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s' % (len(body), body))
+        request.finish()
 
-if __name__ == '__main__':
-    greentornado.join_ioloop()
-    httpserver.HTTPServer(handle_request).listen(8888)
-    ioloop.IOLoop.instance().start()
+    if __name__ == '__main__':
+        greentornado.join_ioloop()
+        httpserver.HTTPServer(handle_request).listen(8888)
+        ioloop.IOLoop.instance().start()
 
 web.py
 ===========
