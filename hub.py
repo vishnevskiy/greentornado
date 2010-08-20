@@ -49,8 +49,8 @@ class LocalTimer(Timer):
             self.called = True
             if self.greenlet is not None and self.greenlet.dead:
                 return
-            cb, args, kw = self.tpl
-            cb(*args, **kw)
+            callback, args, kwargs = self.tpl
+            callback(*args, **kwargs)
 
     def cancel(self):
         self.greenlet = None
