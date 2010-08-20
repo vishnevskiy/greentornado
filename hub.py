@@ -93,7 +93,7 @@ class TornadoHub(object):
     def add(self, event, fd, callback):
         if event is READ:
             self.io_loop.add_handler(fd, callback, ioloop.IOLoop.READ)
-        if event is WRITE:
+        elif event is WRITE:
             self.io_loop.add_handler(fd, callback, ioloop.IOLoop.WRITE)
 
         return fd
