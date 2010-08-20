@@ -1,11 +1,13 @@
 from eventlet import getcurrent, greenlet
 from eventlet.hubs import _threadlocal, use_hub, timer, get_hub
 from eventlet.hubs.hub import READ, WRITE
-from tornado import ioloop
+import tornado.ioloop
+import tornado.web
 import eventlet
 import functools
 import time
 import sys
+import inspect
 
 class Timer(timer.Timer):
     """Fix Eventlet's Timer to work with Tornado's IOLoop."""
@@ -69,7 +71,7 @@ class TornadoHub(object):
 
     def __init__(self, mainloop_greenlet, callback=None):
         self.greenlet = mainloop_greenlet
-        self.io_loop = ioloop.IOLoop.instance()
+        self.io_loop = tornado.ioloop.IOLoop.instance()
 
         if callback:
             # Spawn the callback after the IOLoop starts.
@@ -92,9 +94,9 @@ class TornadoHub(object):
 
     def add(self, event, fd, callback):
         if event is READ:
-            self.io_loop.add_handler(fd, callback, ioloop.IOLoop.READ)
+            self.io_loop.add_handler(fd, callback, tornado.ioloop.IOLoop.READ)
         elif event is WRITE:
-            self.io_loop.add_handler(fd, callback, ioloop.IOLoop.WRITE)
+            self.io_loop.add_handler(fd, callback, tornado.ioloop.IOLoop.WRITE)
 
         return fd
 
@@ -128,25 +130,15 @@ def join_ioloop(callback=None):
     global hub
     hub = _threadlocal.hub = _threadlocal.Hub(greenlet.getcurrent(), callback)
 
-class SpawnFactory(object):
-    """Factory that spawns a new greenlet for each incoming connection.
+def greenify(cls_or_func):
+    """Decorate classes or functions with this to make them spawn as greenlets when initialized or called."""
 
-    For an incoming connection a new greenlet is created using the provided
-    callback as a function and a connected green transport instance as an
-    argument."""
-
-    def __init__(self, handler):
-        self.handler = handler
-
-    def __call__(self, *args, **kwargs):
-        return eventlet.spawn(self.handler, *args, **kwargs)
-
-def greenify_handler(handler):
-    """Similar to SpawnFactory, but used to make a tornado.web.RequestHandler
-    execute within a greenlet."""
-
-    execute = handler._execute
-    handler._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
-
-    return handler
+    if inspect.isclass(cls_or_func) and tornado.web.RequestHandler in inspect.getmro(cls_or_func):
+        execute = cls_or_func._execute
+        cls_or_func._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
+        return cls_or_func
+    else:
+        def wrapper(*args, **kwargs):
+            eventlet.spawn_n(cls_or_func, *args, **kwargs)
+        return wrapper
 
