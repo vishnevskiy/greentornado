@@ -4,8 +4,9 @@ Web Crawler
 ===========
 
     from eventlet.green import urllib2
-    from tornado import ioloop, hub
+    from tornado import ioloop
     import eventlet
+    import greentornado
 
     def scrape():
         urls = ["http://www.google.com/intl/en_ALL/images/logo.gif",
@@ -24,14 +25,15 @@ Web Crawler
         ioloop.IOLoop().instance().stop()
 
     if __name__ == '__main__':
-        hub.join_ioloop(scrape)
+        greentornado.join_ioloop(scrape)
         ioloop.IOLoop().instance().start()
 
 RSS Proxy
 ==========
 
     from eventlet.green import urllib2
-    from tornado import httpserver, ioloop, hub
+    from tornado import httpserver, ioloop
+    import greentornado
 
     def handle_request(request):
         body = urllib2.urlopen('http://blog.eventlet.net/feed/').read()
@@ -39,7 +41,29 @@ RSS Proxy
         request.finish()
 
     if __name__ == '__main__':
-        hub.join_ioloop()
-        httpserver.HTTPServer(hub.SpawnFactory(handle_request)).listen(8888)
+        greentornado.join_ioloop()
+        httpserver.HTTPServer(greentornado.SpawnFactory(handle_request)).listen(8888)
         ioloop.IOLoop.instance().start()
+
+web.py
+===========
+
+    import tornado.httpserver
+    import tornado.ioloop
+    import tornado.web
+    import greentornado
+
+    class MainHandler(tornado.web.RequestHandler):
+        def get(self):
+            self.write("Hello, world")
+
+    application = tornado.web.Application([
+        (r'/', greentornado.greenify_handler(MainHandler)),
+    ])
+
+    if __name__ == '__main__':
+        http_server = tornado.httpserver.HTTPServer(application)
+        http_server.listen(8888)
+        greentornado.join_ioloop()
+        tornado.ioloop.IOLoop.instance().start()
 
