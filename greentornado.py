@@ -139,5 +139,14 @@ class SpawnFactory(object):
         self.handler = handler
 
     def __call__(self, *args, **kwargs):
-        eventlet.spawn_n(self.handler, *args, **kwargs)
+        return eventlet.spawn(self.handler, *args, **kwargs)
+
+def greenify_handler(handler):
+    """Similar to SpawnFactory, but used to make a tornado.web.RequestHandler
+    execute within a greenlet."""
+
+    execute = handler._execute
+    handler._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
+
+    return handler
 
