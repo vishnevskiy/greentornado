@@ -1,6 +1,5 @@
 from eventlet.green import urllib2
 from tornado import ioloop
-from eventlet.hubs import use_hub
 from tornado.httpclient import AsyncHTTPClient
 import eventlet
 import time
@@ -46,7 +45,6 @@ def normal_scrape():
 if __name__ == '__main__':
     # (Tornado w/ Eventlet) HTTP Client
     st = time.time()
-    use_hub(greentornado.Hub)
     eventlet_scrape()
     ioloop.IOLoop().instance().start()
     print time.time() - st

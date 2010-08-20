@@ -1,5 +1,5 @@
 from eventlet import getcurrent, greenlet
-from eventlet.hubs import timer, get_hub
+from eventlet.hubs import timer, get_hub, use_hub
 from eventlet.hubs.hub import READ, WRITE
 import tornado.ioloop
 import tornado.web
@@ -10,7 +10,11 @@ import sys
 import inspect
 
 def greenify(cls_or_func):
-    """Decorate classes or functions with this to make them spawn as greenlets when initialized or called."""
+    """Decorate classes or functions with this to make them spawn as 
+    greenlets when initialized or called."""
+
+    if not isinstance(get_hub(), TornadoHub):
+        use_hub(TornadoHub)
 
     if inspect.isclass(cls_or_func) and tornado.web.RequestHandler in inspect.getmro(cls_or_func):
         execute = cls_or_func._execute

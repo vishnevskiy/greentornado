@@ -4,7 +4,6 @@ Web Crawler
 ===========
 
     from eventlet.green import urllib2
-    from eventlet.hubs import use_hub
     from tornado import ioloop
     import eventlet
     import greentornado
@@ -27,7 +26,6 @@ Web Crawler
         ioloop.IOLoop().instance().stop()
 
     if __name__ == '__main__':
-        use_hub(greentornado.Hub)
         scrape()
         ioloop.IOLoop().instance().start()
 
@@ -35,7 +33,6 @@ HTTP Proxy
 ==========
 
     from eventlet.green import urllib2
-    from eventlet.hubs import use_hub
     from tornado import httpserver, ioloop
     import greentornado
 
@@ -46,14 +43,12 @@ HTTP Proxy
         request.finish()
 
     if __name__ == '__main__':
-        use_hub(greentornado.Hub)
         httpserver.HTTPServer(handle_request).listen(8888)
         ioloop.IOLoop.instance().start()
 
 web.py
 ===========
 
-    from eventlet.hubs import use_hub
     import tornado.httpserver
     import tornado.ioloop
     import tornado.web
@@ -71,6 +66,6 @@ web.py
     if __name__ == '__main__':
         http_server = tornado.httpserver.HTTPServer(application)
         http_server.listen(8888)
-        use_hub(greentornado.Hub)
         tornado.ioloop.IOLoop.instance().start()
 
+If you want to use eventlet without using `greenify` you have to call `eventlet.hubs.use_hub(greentornado.Hub)` manually. 
