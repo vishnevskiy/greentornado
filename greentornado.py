@@ -4,7 +4,6 @@ from eventlet.hubs.hub import READ, WRITE
 import tornado.ioloop
 import tornado.web
 import eventlet
-import functools
 import time
 import sys
 import inspect
@@ -85,13 +84,9 @@ class TornadoHub(object):
     WRITE = WRITE
     READ = READ
 
-    def __init__(self, callback=None):
+    def __init__(self):
         self.greenlet = greenlet.getcurrent()
         self.io_loop = tornado.ioloop.IOLoop.instance()
-
-        if callback:
-            # Spawn the callback after the IOLoop starts.
-            self.io_loop.add_callback(functools.partial(eventlet.spawn_n, callback))
 
     def switch(self):
         assert getcurrent() is not self.greenlet, 'Cannot switch to MAINLOOP from MAINLOOP'
