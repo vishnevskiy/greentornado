@@ -1,6 +1,4 @@
-from eventlet import getcurrent, greenlet
 from eventlet.hubs import timer, get_hub, use_hub
-from eventlet.hubs.hub import READ, WRITE
 import tornado.ioloop
 import tornado.web
 import eventlet
@@ -22,6 +20,7 @@ def greenify(cls_or_func):
     else:
         def wrapper(*args, **kwargs):
             eventlet.spawn_n(cls_or_func, *args, **kwargs)
+        setattr(wrapper, 'original', cls_or_func)
         return wrapper
 
 class Timer(timer.Timer):
@@ -52,7 +51,7 @@ class Timer(timer.Timer):
 
 class LocalTimer(Timer):
     def __init__(self, *args, **kwargs):
-        self.greenlet = greenlet.getcurrent()
+        self.greenlet = eventlet.getcurrent()
         Timer.__init__(self, *args, **kwargs)
 
     @property
@@ -81,18 +80,18 @@ def call_later(cls, seconds, func, *args, **kwargs):
     return cls(seconds, func, *args, **kwargs)
 
 class TornadoHub(object):
-    WRITE = WRITE
-    READ = READ
+    READ = tornado.ioloop.IOLoop.READ
+    WRITE = tornado.ioloop.IOLoop.WRITE
 
     def __init__(self):
-        self.greenlet = greenlet.getcurrent()
+        self.greenlet = eventlet.getcurrent()
         self.io_loop = tornado.ioloop.IOLoop.instance()
 
     def switch(self):
-        assert getcurrent() is not self.greenlet, 'Cannot switch to MAINLOOP from MAINLOOP'
+        assert eventlet.getcurrent() is not self.greenlet, 'Cannot switch to MAINLOOP from MAINLOOP'
 
         try:
-            getcurrent().parent = self.greenlet
+            eventlet.getcurrent().parent = self.greenlet
         except ValueError:
             pass
 
@@ -104,11 +103,7 @@ class TornadoHub(object):
     abort = stop
 
     def add(self, event, fd, callback):
-        if event is READ:
-            self.io_loop.add_handler(fd, callback, tornado.ioloop.IOLoop.READ)
-        elif event is WRITE:
-            self.io_loop.add_handler(fd, callback, tornado.ioloop.IOLoop.WRITE)
-
+        self.io_loop.add_handler(fd, callback, event)
         return fd
 
     def remove(self, fd):
