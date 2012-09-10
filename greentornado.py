@@ -10,9 +10,6 @@ def greenify(cls_or_func):
     """Decorate classes or functions with this to make them spawn as 
     greenlets when initialized or called."""
 
-    if not isinstance(get_hub(), TornadoHub):
-        use_hub(TornadoHub)
-
     if inspect.isclass(cls_or_func) and tornado.web.RequestHandler in inspect.getmro(cls_or_func):
         execute = cls_or_func._execute
         cls_or_func._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
@@ -82,6 +79,11 @@ def call_later(cls, seconds, func, *args, **kwargs):
 class TornadoHub(object):
     READ = tornado.ioloop.IOLoop.READ
     WRITE = tornado.ioloop.IOLoop.WRITE
+
+    @staticmethod
+    def start():
+       use_hub(TornadoHub)
+       tornado.ioloop.IOLoop.instance().start()
 
     def __init__(self):
         self.greenlet = eventlet.getcurrent()
