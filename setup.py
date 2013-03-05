@@ -31,6 +31,7 @@ setup(name='greentornado',
         'eventlet',
         'tornado',
     ],
+    tests_require=['pytest'],
     classifiers=CLASSIFIERS,
     test_suite='tests',
 )
