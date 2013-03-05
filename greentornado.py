@@ -5,6 +5,7 @@ import eventlet
 import time
 import sys
 import inspect
+import functools
 
 def greenify(cls_or_func):
     """Decorate classes or functions with this to make them spawn as 
@@ -15,9 +16,10 @@ def greenify(cls_or_func):
         cls_or_func._execute = lambda self, *args, **kwargs: eventlet.spawn_n(execute, self, *args, **kwargs)
         return cls_or_func
     else:
+        @functools.wraps(cls_or_func)
         def wrapper(*args, **kwargs):
-            eventlet.spawn_n(cls_or_func, *args, **kwargs)
-        setattr(wrapper, 'original', cls_or_func)
+            return eventlet.spawn_n(cls_or_func, *args, **kwargs)
+        wrapper.original = cls_or_func
         return wrapper
 
 class Timer(timer.Timer):
