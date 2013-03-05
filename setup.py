@@ -27,6 +27,10 @@ setup(name='greentornado',
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     platforms=['any'],
+    install_requires=[
+        'eventlet',
+        'tornado',
+    ],
     classifiers=CLASSIFIERS,
     test_suite='tests',
 )
